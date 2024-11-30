@@ -1,3 +1,9 @@
 {
-  "extends": ["next/core-web-vitals", "next/typescript","standard","plugin:prettier/recommended","prettier"]
+  "extends": ["next/core-web-vitals", "next/typescript", "standard", "plugin:prettier/recommended", "prettier"],
+  "rules": {
+    "semi": ["error", "never"],  // Pas de points-virgules
+    "quotes": ["error", "double"],  // Utilisation des guillemets doubles
+    "indent": ["error", 2] , // Indentation de 2 espaces
+    "import/no-commonjs": "off"
+  }
 }
