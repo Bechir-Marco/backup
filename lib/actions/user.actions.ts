@@ -2,9 +2,11 @@
 
 import { ID, Query } from "node-appwrite"
 import { appwriteConfig } from "../appwrite/config"
-import { createAdminClient } from "../appwrite"
+import { createAdminClient, createSessionClient } from "../appwrite"
 import { parseStringify } from "../utils"
 import { cookies } from "next/headers"
+import { avatarPlaceholderUrl } from "@/constants"
+import { redirect } from "next/navigation"
 
 export const getUserByEmail = async (email: string) => {
   const { databases } = await createAdminClient()
@@ -50,8 +52,7 @@ export const createAccount = async ({
       {
         fullName,
         email,
-        avatar:
-          "https://cdn.pixabay.com/photo/2016/08/08/09/17/avatar-1577909_960_720.png",
+        avatar: avatarPlaceholderUrl,
         accountId
       }
     )
@@ -82,5 +83,40 @@ export const verifySecret = async ({
     return parseStringify({ sessionId: session.$id })
   } catch (error) {
     handleError(error, "Failed to verify OTP")
+  }
+}
+export const getCurrentUser = async () => {
+  const { databases, account } = await createSessionClient()
+  const result = await account.get()
+  const user = await databases.listDocuments(
+    appwriteConfig.databaseId,
+    appwriteConfig.usersCollectionId,
+    [Query.equal("accountId", [result.$id])]
+  )
+  if (user.total <= 0) return null
+  return parseStringify(user.documents[0])
+}
+export const signOutUser = async () => {
+  const { account } = await createSessionClient()
+
+  try {
+    await account.deleteSession("current")
+    ;(await cookies()).delete("appwrite-session")
+  } catch (error) {
+    handleError(error, "Failed to sign out user")
+  } finally {
+    redirect("/sign-in")
+  }
+}
+export const signInUser = async ({ email }: { email: string }) => {
+  try {
+    const existingUser = await getUserByEmail(email)
+    if (existingUser) {
+      await sendEmailOTP({ email })
+      return parseStringify({ accountId: existingUser.accountId })
+    }
+    return parseStringify({ accountId: null, error: "User not found" })
+  } catch (error) {
+    handleError(error, "Failed to sign in user")
   }
 }
