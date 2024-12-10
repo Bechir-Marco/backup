@@ -16,28 +16,47 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
-
-const formSchema = z.object({
-  username: z.string().min(2).max(50)
-})
+import { createAccount } from "@/lib/actions/user.actions"
+import OtpModal from "@/components/OtpModal"
 
 type FormType = "sign-in" | "sign-up"
-
+const authFormSchema = (formType: FormType) => {
+  return z.object({
+    email: z.string().email(),
+    fullName:
+      formType === "sign-up" ? z.string().min(2).max(50) : z.string().optional()
+  })
+}
 const AuthForm = ({ type }: { type: FormType }) => {
+  const [isLoading, setIsLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
+  const [accountId, setAccountId] = useState(null)
+
+  const formSchema = authFormSchema(type)
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: ""
+      fullName: "",
+      email: ""
     }
   })
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // Do something with the form values.
-    // ✅ This will be type-safe and validated.
-    console.log(values)
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsLoading(true)
+    setErrorMessage("")
+    try {
+      const user = await createAccount({
+        fullName: values.fullName || "",
+        email: values.email
+      })
+      setAccountId(user.accountId)
+    } catch {
+      setErrorMessage("Failed to create account. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
-  const [isLoading, setIsLoading] = useState(false)
-  const [errorMessage, setErrorMessage] = useState(false)
 
   return (
     <>
@@ -56,7 +75,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
                     <FormLabel className="shad-form-label">Full Name</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="enter your full Name"
+                        placeholder="Enter your full Name"
                         className="shad-input"
                         {...field}
                       />
@@ -111,7 +130,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
             <p className="text-light-100">
               {type === "sign-in"
                 ? "Don't have an account ?"
-                : "Alraedy have an account"}
+                : "Already have an account"}
             </p>
             <Link
               rel="stylesheet"
@@ -124,7 +143,9 @@ const AuthForm = ({ type }: { type: FormType }) => {
           </div>
         </form>
       </Form>
-      {/* OTP Verif */}
+      {accountId && (
+        <OtpModal email={form.getValues("email")} accountId={accountId} />
+      )}
     </>
   )
 }
