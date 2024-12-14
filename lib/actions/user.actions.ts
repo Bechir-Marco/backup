@@ -76,7 +76,8 @@ export const verifySecret = async ({
       path: "/",
       httpOnly: true,
       sameSite: "strict",
-      secure: true
+      secure: true,
+      maxAge: 60 * 60 * 24 * 2
     })
 
     // Retourner les données de la session
